@@ -5,8 +5,18 @@ export default function Contact() {
       <p className="text-sm text-gray-700">
         <a
           className="text-yellow-600 hover:underline"
+          href="mailto:tjtik83@gmail.com"
         >
           tjtik83@gmail.com
+        </a>
+        <br />
+        <a
+          className="text-yellow-600 hover:underline"
+          href="https://github.com/Pattharapol"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Github
         </a>
         <br />
         065-073-5610
