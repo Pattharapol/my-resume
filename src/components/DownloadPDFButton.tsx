@@ -1,38 +1,28 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 export default function DownloadPDFButton() {
   const handleDownload = async () => {
-    const resume = document.getElementById("resume-content");
-    if (!resume) return;
+    try {
+      const res = await fetch("/api/export-pdf", { method: "GET" });
+      if (!res.ok) {
+        const err = await res.text().catch(() => res.statusText);
+        console.error("export-pdf failed:", err);
+        return;
+      }
 
-    const canvas = await html2canvas(resume, {
-      scale: 2,
-      ignoreElements: (el) => {
-        const style = getComputedStyle(el);
-        return (
-          style.color.includes("lab(") || style.backgroundColor.includes("lab(")
-        );
-      },
-    });
-    const imgData = canvas.toDataURL("image/png");
-
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    // Resize canvas to fit page
-    const ratio = Math.min(
-      pageWidth / canvas.width,
-      pageHeight / canvas.height
-    );
-    const imgWidth = canvas.width * ratio;
-    const imgHeight = canvas.height * ratio;
-
-    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-    pdf.save("Pattharapol_Lakboon_Resume.pdf");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Pattharapol_Lakboon_Resume.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("download error:", e);
+    }
   };
 
   return (
