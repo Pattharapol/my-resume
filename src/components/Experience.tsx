@@ -1,7 +1,20 @@
 export default function Experience() {
   const experiences = [
     {
-      title: "Nov 2023 – Present @ Ngern Tid Lor",
+      title: "January 2026 - Present Tech Lead @ SoftwareAndScale Engineering",
+      details: [
+        "Lead development of APIs for internal mobile and web applications.",
+        "Design and maintain relational and non-relational databases.",
+        "Review code and provide guidance to team members and interns.",
+        "Apply simple and maintainable coding practices (KISS principle).",
+        "Integrate APIs with banking and third-party services such as BBL, UOB, KBANK, BAY, 2C2P, Omise, and internal systems.",
+        "Improve legacy functions and refactor outdated approaches when necessary.",
+        "Work closely with PO, BA, SA, and business teams to deliver practical technical solutions.",
+        "Provide technical estimation and solution design for new features and client requirements."
+      ]
+    },
+    {
+      title: "Nov 2023 – December 2025 @ Ngern Tid Lor",
       details: [
         "Develop API (Microservice) for internal applications on both mobile and web platforms.",
         "Design relational and non-relational databases for application use.",

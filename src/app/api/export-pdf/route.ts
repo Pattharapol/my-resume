@@ -1,19 +1,20 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import type { Browser, Page } from "puppeteer";
 
 export async function GET() {
-  let browser: any = null;
+  let browser: Browser | null = null;
   try {
     const puppeteerMod = await import("puppeteer");
-    const puppeteer = puppeteerMod.default || puppeteerMod;
+    const puppeteer = (puppeteerMod.default || puppeteerMod) as unknown as typeof import("puppeteer");
 
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
-    const page = await browser.newPage();
+    const page: Page = await browser.newPage();
 
     // helper: sleep (replacement for page.waitForTimeout)
     const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -30,7 +31,6 @@ export async function GET() {
 
     // กำหนดฟังก์ชันแปลง mm <-> px (96dpi)
     const mmToPx = (mm: number) => Math.round(mm * 3.779527559); // 1mm = 96/25.4 px
-    const a4WidthPx = mmToPx(210);
     const a4HeightPx = mmToPx(297);
 
     // ไปที่หน้า resume (ใช้ path ที่ถูกต้อง)
@@ -74,10 +74,12 @@ export async function GET() {
     });
 
     // ให้เพจใช้ media=print ตอน generate PDF
-    if (typeof page.emulateMediaType === "function") {
-      await page.emulateMediaType("print");
-    } else if ((page as any).emulateMedia) {
-      await (page as any).emulateMedia({ media: "print" });
+    const pageWithEmulateMediaType = page as unknown as { emulateMediaType?: (media: string) => Promise<void> };
+    const pageWithEmulateMedia = page as unknown as { emulateMedia?: (opts: { media: string }) => Promise<void> };
+    if (typeof pageWithEmulateMediaType.emulateMediaType === "function") {
+      await pageWithEmulateMediaType.emulateMediaType!("print");
+    } else if (typeof pageWithEmulateMedia.emulateMedia === "function") {
+      await pageWithEmulateMedia.emulateMedia!({ media: "print" });
     }
 
     // รอให้ CSS ที่ฉีดมีผล
@@ -90,7 +92,16 @@ export async function GET() {
     if (contentHeightPx > printableHeightPx && contentHeightPx > 0) {
       pdfScale = printableHeightPx / contentHeightPx;
       pdfScale = Math.max(0.45, Math.min(1, pdfScale));
-      console.log("Adjusting PDF scale:", pdfScale, "contentHeightPx:", contentHeightPx, "printableHeightPx:", printableHeightPx, "contentWidthPx:", contentWidthPx);
+      console.log(
+        "Adjusting PDF scale:",
+        pdfScale,
+        "contentHeightPx:",
+        contentHeightPx,
+        "printableHeightPx:",
+        printableHeightPx,
+        "contentWidthPx:",
+        contentWidthPx
+      );
     }
 
     const pdfBuffer = await page.pdf({
@@ -101,15 +112,32 @@ export async function GET() {
       scale: pdfScale,
     });
 
-    return new NextResponse(pdfBuffer, {
+    // normalize pdfBuffer -> Buffer safely (no 'any' and no problematic overloads)
+    let buf: Buffer;
+    if (typeof Buffer !== "undefined" && Buffer.isBuffer(pdfBuffer)) {
+      buf = Buffer.from(pdfBuffer);
+    } else if (ArrayBuffer.isView(pdfBuffer)) {
+      // Uint8Array or other TypedArray / DataView
+      const view = pdfBuffer as ArrayBufferView;
+      buf = Buffer.from(view.buffer, view.byteOffset, view.byteLength);
+    } else if (pdfBuffer instanceof ArrayBuffer) {
+      buf = Buffer.from(new Uint8Array(pdfBuffer));
+    } else {
+      // fallback: coerce to string (shouldn't normally happen)
+      buf = Buffer.from(String(pdfBuffer));
+    }
+
+    const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+
+    return new NextResponse(arrayBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": "attachment; filename=Pattharapol_Lakboon_Resume.pdf",
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("export-pdf error:", err);
-    return new NextResponse(JSON.stringify({ error: String(err.message || err) }), {
+    return new NextResponse(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
